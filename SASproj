@@ -1,0 +1,348 @@
+* Clear eveything in the result viewer before running code;
+ODS HTML CLOSE;
+ODS HTML;
+
+* ------------ Also store output as PDF file ----------------;
+options nodate pageno=1;
+ods pdf file='H:\statcomp\Project\Wildfire_NC.pdf' style=journal;
+
+/************************************************************************
+* 1. Import the NC data and look at the descriptive portion of the data *
+************************************************************************/
+
+* Set library;
+libname Project "H:\statcomp\Project";
+
+* 1. a. Import data;
+proc import OUT= project.FireNC
+            DATAFILE= "H:\statcomp\Project\fires_NC.csv"
+		  dbms=csv replace ;
+	getnames=yes;
+	datarow=2;
+	guessingrows=10000;
+run; 
+proc print data = project.FireNC (obs=5);
+run;
+
+* 1. b. Descriptive portion of the data; 
+title1 "Descriptive portion Wild fire NC region";
+Ods select variables;
+proc contents data=project.FireNC;
+run;
+Title1;
+
+data work.subset1; 
+	set project.FireNC; 
+	label 	FOD_ID = "Global unique identifie"
+			FPA_ID = "Unique identifier that contains information necessary to track back to the original record in the source dataset"
+			SOURCE_SYSTEM_TYPE = "Type of source database or system that the record was drawn from (federal, nonfederal, or interagency)"
+			SOURCE_SYSTEM = "Name of or other identifier for source database or system that the record was drawn from"
+			NWCG_REPORTING_AGENCY = "Active National Wildlife Coordinating Group (NWCG) Unit Identifier for the agency preparing the fire report (BIA = Bureau of Indian Affairs, BLM = Bureau of Land Management, BOR = Bureau of Reclamation, DOD = Department of Defense, DOE = Department of Energy, FS = Forest Service, FWS = Fish and Wildlife Service, IA = Interagency Organization, NPS = National Park Service, ST/C&L = State, County, or Local Organization, and TRIBE = Tribal Organization)" 
+			NWCG_REPORTING_UNIT_ID = "Active NWCG Unit Identifier for the unit preparing the fire report"
+			NWCG_REPORTING_UNIT_NAME = "Active NWCG Unit Name for the unit preparing the fire report."
+			SOURCE_REPORTING_UNIT = "Code for the agency unit preparing the fire report, based on code/name in the source dataset."
+			SOURCE_REPORTING_UNIT_NAME = "Name of reporting agency unit preparing the fire report, based on code/name in the source dataset."
+			LOCAL_FIRE_REPORT_ID = "Number or code that uniquely identifies an incident report for a particular reporting unit and a particular calendar year."
+			LOCAL_INCIDENT_ID = "Number or code that uniquely identifies an incident for a particular local fire management organization within a particular calendar year."
+			FIRE_CODE = "Code used within the interagency wildland fire community to track and compile cost information for emergency fire suppression."
+			FIRE_NAME = "Name of the incident, from the fire report (primary) or ICS-209 report (secondary)."
+			ICS_209_INCIDENT_NUMBER = "Incident (event) identifier, from the ICS-209 report."
+			ICS_209_NAME = "Name of the incident, from the ICS-209 report."
+			MTBS_ID = "Incident identifier, from the MTBS perimeter dataset."
+			MTBS_FIRE_NAME = "Name of the incident, from the MTBS perimeter dataset."
+			COMPLEX_NAME = "Name of the complex under which the fire was ultimately managed, when discernible."
+			FIRE_YEAR = "Calendar year in which the fire was discovered or confirmed to exist."
+			DISCOVERY_DATE = "Date on which the fire was discovered or confirmed to exist."
+			DISCOVERY_DOY = "Day of year on which the fire was discovered or confirmed to exist."
+			DISCOVERY_TIME = "Time of day that the fire was discovered or confirmed to exist."
+			STAT_CAUSE_CODE = "Code for the (statistical) cause of the fire."
+			STAT_CAUSE_DESCR = "Description of the (statistical) cause of the fire."
+			CONT_DATE = "Date on which the fire was declared contained or otherwise controlled (mm/dd/yyyy where mm=month, dd=day, and yyyy=year)."	
+			CONT_DOY = "Day of year on which the fire was declared contained or otherwise controlled."
+			CONT_TIME = "Time of day that the fire was declared contained or otherwise controlled (hhmm where hh=hour, mm=minutes)."
+			FIRE_SIZE = "Estimate of acres within the final perimeter of the fire."
+			FIRE_SIZE_CLASS = "Code for fire size based on the number of acres within the final fire perimeter expenditures (A=greater than 0 but less than or equal to 0.25 acres, B=0.26-9.9 acres, C=10.0-99.9 acres, D=100-299 acres, E=300 to 999 acres, F=1000 to 4999 acres, and G=5000+ acres)."
+			LATITUDE = "Latitude (NAD83) for point location of the fire (decimal degrees)."
+			LONGITUDE = "Longitude (NAD83) for point location of the fire (decimal degrees)."
+			OWNER_CODE = "Code for primary owner or entity responsible for managing the land at the point of origin of the fire at the time of the incident."
+			OWNER_DESCR = "Name of primary owner or entity responsible for managing the land at the point of origin of the fire at the time of the incident."
+			STATE = "Two-letter alphabetic code for the state in which the fire burned (or originated), based on the nominal designation in the fire report."
+			COUNTY = "County, or equivalent, in which the fire burned (or originated), based on nominal designation in the fire report."
+			FIPS_CODE = "Three-digit code from the Federal Information Process Standards (FIPS) publication 6-4 for representation of counties and equivalent entities."
+			FIPS_NAME = "County name from the FIPS publication 6-4 for representation of counties and equivalent entities."
+run; 
+
+title1 "Descriptive portion Wild fire NC region including label";
+Ods select variables;
+proc contents data=work.subset1;
+run;
+Title1;
+
+/************************************************************************
+* 2. Create a permanent dataset the keeping following variables...      *
+************************************************************************/
+
+* Create permanent dataset of selected variables;
+DATA Project.fnc;
+    set Project.firenc;
+    keep fod_id state county fips_code discovery_date fire_year fire_size latitude longitude stat_cause_code stat_cause_descr;
+RUN;
+
+* Display the first five rows of the new table;
+proc print data = project.fnc (obs=5);
+Run;
+
+/************************************************************************
+* 3. How many levels are there for each character variable?             *
+************************************************************************/
+
+* Amount of levels and missing values for each variable with a character format;
+title1 "Categorical Variables: amount of levels and missing values";
+ods select NLevels;
+proc freq data = Project.fnc nlevels;
+table _character_;
+run;
+title1;
+
+* Get the levels and their freq count of each variable with a character format;
+title1 "Categorical Variable Frequency Analysis";
+proc freq data=Project.fnc order=freq;
+ table _character_ / nocum;
+run;
+Title1;
+
+/************************************************************************
+* 4. Check for inconsistencies in the data. Count missing values for    *
+* the numeric variables. Look for extreme observations. Report your     *
+* findings.                                                             *
+************************************************************************/
+
+* For all numeric variables except the ID and display 3 extreme observations;
+title1 "Detect inconsistencies in data";
+proc univariate data=Project.fnc nextrobs=3;
+   id fod_id;
+run;
+Title1;
+
+* Interval variable distribution analysis - continuous variables;
+title1 "Interval variable distribution analysis";
+proc univariate data=Project.fnc;
+   var fips_code fire_year fire_size latitude longitude ;
+   histogram fips_code fire_year fire_size latitude longitude /normal kernel;
+   inset n mean std/position = ne;
+run;
+Title1;
+
+* Display missing data pattern;
+title1 "Missing data pattern numeric variables";
+ods select MissPattern;
+proc mi data=Project.fnc nimpute=0;
+var _numeric_ ;
+run;
+title1;
+
+
+/************************************************************************
+* 5. Create a new variable indicating the month of discovery using one  *
+* or more SAS functions.                                                *
+************************************************************************/
+
+proc format;
+	value asmonth 1 = 'January'                  
+		2 = 'February'
+		3 = 'March'
+		4 = 'April'
+		5 = 'May'
+		6 = 'June'
+		7 = 'July'
+		8 = 'August'
+		9 = 'September'
+		10 = 'October'
+		11 = 'November'
+		12 = 'December';
+run;
+
+proc print data = Project.fnc (obs=5);
+    format DISCOVERY_DATE DATETIME;
+run;
+ 
+data Project.fnc1;
+    set Project.fnc;
+  	MONTH=month(datepart(DISCOVERY_DATE));
+	format MONTH asmonth.;
+run;
+
+proc print data = Project.fnc1 (obs=5);
+run;
+
+/************************************************************************
+* 6. Create a format for fire_size_class  *******************************
+************************************************************************/
+
+proc format;
+	value firesc 0<-0.25 = 'A'                  
+		0.25<-<10 = 'B'
+		10-<100 = 'C'
+		100-<300 = 'D'
+		300-<1000 = 'E'
+		1000-<5000 = 'F'
+		5000-high = 'G';
+run;
+
+data Project.fnc2;
+	set Project.fnc1;
+	FIRE_SIZE_CLASS = fire_size;
+	FORMAT FIRE_SIZE_CLASS firesc.;
+run;
+proc print data = Project.fnc2 (obs=5);
+run;
+
+/************************************************************************
+* 7. Investigate the months with the highest number of fires. Visualise *
+* this with a plot and display the month with 3 characters. Include the *
+* graph in your report and discuss.                                     *
+************************************************************************/
+
+* Investigate the months with the highest number of fires;
+title1 font=Arial height=18pt "Number of fires per month";
+proc freq data=Project.fnc2;
+   Tables MONTH / plots=freqplot(scale=freq) out = freqout;
+ format MONTH asmonth3.;
+run;
+title1; 
+
+/************************************************************************
+* 8. Create a bar chart displaying the number of fires for each cause.  *
+* What is the major cause? Include the graph in your report and discuss.*
+************************************************************************/
+
+*optie 1;
+title1 font=Arial height=18pt "Number of fires per cause";
+proc sgplot data=Project.fnc2;
+  vbar STAT_CAUSE_DESCR/ CATEGORYORDER=RESPDESC;
+  xaxis label = "Cause of fire";
+  Yaxis label = "frequency";
+run;
+Title;
+
+* Optie 2;
+title1 "(statistical) Cause of fire: frequency plot";
+proc freq data=Project.fnc order=freq;
+ table STAT_CAUSE_DESCR / plots=freqplot;
+run;
+title1;
+
+
+/************************************************************************
+* 9. Which county had the biggest fires on average? Create a SAS        *
+* dataset including the number of observations, the mean values and the *
+* 95% confidence interval.                                              *
+************************************************************************/
+
+/************************************************************************
+10.	Select these 10 counties from the original dataset and visualise the data (displaying the average). Include the graph in your report.
+************************************************************************/
+
+/************************************************************************
+11.	Visualize the causes of fire versus the size by month. Make use of the sgpanel procedure. Do you observe month to month differences? Include the graph(s) in your report and discuss.
+************************************************************************/
+
+/************************************************************************
+12.	Plot the number of fires over time for the 3 main causes. Add a tickvalue for each year and rotate the labels. Include the graph in your report.
+************************************************************************/
+
+data Project.main3;
+	set Project.fnc2;
+	where STAT_CAUSE_DESCR in ('Arson', 'Debris Burning', 'Equipment Use');
+run;
+
+
+
+
+
+/************************************************************************
+13.	Report the number of fires, the total fire size, the average fire size, and the max fire size for each of the top 3 causes. Create a table for this and include the table in your report.
+************************************************************************/
+
+/************************************************************************
+14.	Is the log transformed fire size normally distributed for each of the top 3 causes? Discuss this graphically and by formal testing. Write the graphs and the tests to an rtf file and discuss.
+************************************************************************/
+* log transformed fire size and only the three main causes;
+DATA Project.fnc2;
+	SET Project.fnc;
+	logtransform= log(FIRE_SIZE);
+ where STAT_CAUSE_DESCR in ('Arson', 'Debris Burning', 'Equipment Use');
+RUN;
+
+*  Is fire size normally distributed?;
+proc univariate data=Project.fnc2 noprint;
+  class STAT_CAUSE_DESCR;
+  var FIRE_SIZE;
+  histogram FIRE_SIZE / nrow=3 normal ;
+Run;
+
+* Is the log transformed fire size normally distributed for the 3 causes?;
+ods select histogram;
+proc univariate data=Project.fnc2 noprint;
+  class STAT_CAUSE_DESCR;
+  var logtransform;
+  histogram logtransform / nrow=3 normal ;
+  inset n mean std / position=ne;
+run;
+* Conclusion: data is not normally distributed;
+
+ods listing close;
+options orientation=portrait nodate nonumber;
+ods rtf file='combine_graphandtable.rtf' startpage=no nogtitle nogfootnote;
+title "test";
+PROC PRINT DATA = NormaliltyTest LABEL NOOBS;
+run;
+goptions reset=goptions;
+ods select histogram;
+proc univariate data=Project.fnc2 noprint;
+  class STAT_CAUSE_DESCR;
+  var logtransform;
+  histogram logtransform / normal ;
+  inset n mean std / position=ne;
+run;
+quit;
+ods rtf close;
+
+
+
+/************************************************************************
+15.	Is there a significant difference in fire size in the year 2015 between the 3 main causes. Apply an appropriate test. Report your findings.
+************************************************************************/
+
+* Removed the extreme most values to make the date for the 2 smaller categories visible;
+DATA Project.main3_no_outliers;
+	SET Project.main3;
+	IF fire_size < 5000;
+RUN;
+proc sgplot data=Project.main3_no_outliers;
+    vbox fire_size / category=stat_cause_descr connect=mean;
+run;
+
+* Anova;
+options nolabel;
+proc glm data=Project.main3 plots=diagnostics;
+   class stat_cause_descr;
+   model fire_size = stat_cause_descr / solution ss3;
+   means stat_cause_descr / hovtest=levene;
+   *format stat_cause_descr $stat_cause_descr.;
+run;
+
+proc glm data=Project.main3 plots=all;
+    class stat_cause_descr;
+    model fire_size=stat_cause_descr;
+    lsmeans stat_cause_descr / pdiff=all adjust=tukey;
+    lsmeans stat_cause_descr / pdiff=control('Average/Typical') adjust=dunnett;
+    *format stat_cause_descr $stat_cause_descr.;
+run;
+quit;
+
+/************************************************************************
+16.	Create a macro-value from the p-value of the previous test and write the value to the log.
+************************************************************************/
+
+
