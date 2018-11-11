@@ -1,3 +1,5 @@
+*test;
+
 * Clear eveything in the result viewer before running code;
 ODS HTML CLOSE;
 ODS HTML;
