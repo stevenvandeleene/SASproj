@@ -1,6 +1,3 @@
-*As text file: https://codeshare.io/aJvVwd;
-
-
 * Clear eveything in the result viewer before running code;
 ODS HTML CLOSE;
 ODS HTML;
