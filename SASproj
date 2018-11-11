@@ -1,4 +1,5 @@
-*test;
+*As text file: https://codeshare.io/aJvVwd;
+
 
 * Clear eveything in the result viewer before running code;
 ODS HTML CLOSE;
@@ -346,5 +347,13 @@ quit;
 /************************************************************************
 16.	Create a macro-value from the p-value of the previous test and write the value to the log.
 ************************************************************************/
+
+
+
+
+
+
+
+
 
 
