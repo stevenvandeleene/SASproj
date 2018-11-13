@@ -34,7 +34,7 @@ Title1;
 
 proc format;
 	value $asmonth
-		1 = 'January'                  
+		1 = 'Jan'                  
 		2 = 'February'
 		3 = 'March'
 		4 = 'April'
@@ -217,7 +217,7 @@ data work.subset1;
 			FIPS_CODE = "Three-digit code from the Federal Information Process Standards (FIPS) publication 6-4 for representation of counties and equivalent entities."
 			FIPS_NAME = "County name from the FIPS publication 6-4 for representation of counties and equivalent entities.";
 	MONTH = month(datepart(DISCOVERY_DATE));
-	format	MONTH $asmonth.
+	format	MONTH asmonth3.
 			COUNTY $countytxt.
 			STAT_CAUSE_DESCR $cause_und.;
 run; 
@@ -447,3 +447,12 @@ Title;
 /************************************************************************
 16.	Create a macro-value from the p-value of the previous test and write the value to the log.
 ************************************************************************/
+
+
+
+
+
+
+
+
+
