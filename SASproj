@@ -1,3 +1,36 @@
+* Clear eveything in the result viewer before running code;
+ODS HTML CLOSE;
+ODS HTML;
+dm 'log;clear;output;clear;';
+
+* ------------ Also store output as PDF file ----------------;
+options nodate pageno=1;
+ods pdf file='H:\statcomp\Project\Wildfire_NC.pdf' style=journal;
+
+/************************************************************************
+* 1. Import the NC data and look at the descriptive portion of the data *
+************************************************************************/
+
+* Set library;
+libname Project "H:\statcomp\Project";
+
+* 1. a. Import data;
+proc import OUT= project.FireNC
+            DATAFILE= "H:\statcomp\Project\fires_NC.csv"
+		  dbms=csv replace ;
+	getnames=yes;
+	datarow=2;
+	guessingrows=10000;
+run; 
+proc print data = project.FireNC (obs=5);
+run;
+
+* 1. b. Descriptive portion of the data; 
+title1 "Descriptive portion Wild fire NC region";
+Ods select variables;
+proc contents data=project.FireNC;
+run;
+Title1;
 
 proc format;
 	value $asmonth
@@ -229,18 +262,3 @@ proc freq data=Project.fnc order=freq;
 	tables &categorical / nocum;
 run;
 Title1;
-
-
-
-
-
-
-
-
-
-
-
-
-* I'm readding the rest (will appear soon);
-
-
