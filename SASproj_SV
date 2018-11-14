@@ -339,11 +339,55 @@ title1;
 * dataset including the number of observations, the mean values and the *
 * 95% confidence interval.                                              *
 ************************************************************************/
+*Calculate N Mean LCLM UCLM by county.;
+proc means data = Project.fnc N Mean LCLM UCLM;
+		var FIRE_SIZE;
+		class  COUNTY;
+		output out=Project.fnc_means N=n_obs mean=average LCLM=lower_CI UCLM=upper_CI;
+run;
+*Sort by average descending.;
+proc sort data = fnc_means;
+	by descending Average;
+run;
+*Print the first observation having the highest average fire_size;
+proc print data = fnc_means (obs = 1);
+run;
 
 /************************************************************************
 10.	Select these 10 counties from the original dataset and visualise the data (displaying the average). Include the graph in your report.
 ************************************************************************/
+*Create subset of top 10 counties;
+data Fnc_means_sub;
+	set Fnc_means (obs = 10);
+	keep county;
+run;
 
+*Sort the initial dataset and the Fnc_means_sub dataset by the variable that will be merged;
+proc sort data = Project.Fnc out = Fnc_sorted;
+	by county;
+run;
+
+proc sort data = Fnc_means_sub;
+	by county;
+run;
+
+*Create a dataset based on the top 10 counties;
+data Project.Fnc_top10_selection;
+	merge Fnc_means_sub (in = mean)
+			Fnc_sorted (in = full);
+	by county;
+	if mean = 1 and full = 1;
+run;
+
+*Create a barplot of the top 10 countries and their average fire size;
+title 'Top 10 counties with the largest average fire size';
+proc sgplot data = fnc_top10_selection;
+	label county = 'County'
+		  fire_size = 'Average fire size';
+	vbar county / response = fire_size stat = mean;
+	;
+run;
+title;
 /************************************************************************
 11.	Visualize the causes of fire versus the size by month. Make use of the sgpanel procedure. Do you observe month to month differences? Include the graph(s) in your report and discuss.
 ************************************************************************/
